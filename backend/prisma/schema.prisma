@@ -1,0 +1,74 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  chatId        String         @id
+  createdAt     DateTime       @default(now())
+  sentListings  SentListing[]
+  subscriptions Subscription[]
+}
+
+model Subscription {
+  id         String   @id @default(cuid())
+  userChatId String
+  category   String
+  priceMin   Int?
+  priceMax   Int?
+  district   String?
+  roomsMin   Float?
+  roomsMax   Float?
+  areaMin    Int?
+  areaMax    Int?
+  createdAt  DateTime @default(now())
+  user       User     @relation(fields: [userChatId], references: [chatId], onDelete: Cascade)
+
+  @@index([userChatId])
+}
+
+model Listing {
+  id         String        @id
+  title      String
+  price      String
+  priceValue Int?
+  district   String?
+  rooms      Float?
+  area       Int?
+  category   String
+  link       String        @unique
+  createdAt  DateTime      @default(now())
+  pricePerM2 Int?
+  floor      String?
+  pubDate    DateTime      @default(now())
+  sentTo     SentListing[]
+}
+
+model SentListing {
+  id         String   @id @default(cuid())
+  userChatId String
+  listingId  String
+  sentAt     DateTime @default(now())
+  listing    Listing  @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  user       User     @relation(fields: [userChatId], references: [chatId], onDelete: Cascade)
+
+  @@unique([userChatId, listingId])
+}
+
+model FailedListing {
+  id             String   @id @default(cuid())
+  listingId      String?  // Can be null if we couldn't extract an ID
+  title          String?
+  link           String   @unique
+  error          String   // Error description
+  rawData        String?  // Original RSS item data
+  failureType    String   // Type of failure: PARSING_ERROR, INVALID_DATA, NOTIFICATION_ERROR
+  createdAt      DateTime @default(now())
+  resolved       Boolean  @default(false)
+  resolvedAt     DateTime?
+  additionalInfo Json?   // Additional context about the failure
+}
